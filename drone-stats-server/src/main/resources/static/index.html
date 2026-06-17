@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мониторинг логистической сети Factorio</title>
+
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            background-color: #121214;
+            color: #e1e1e6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h1, h2, h3 { color: #ffffff; }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 30px;
+            margin-top: 30px;
+        }
+        .interactive-card {
+            cursor: pointer;
+            border: 1px solid #29292e;
+            padding: 40px 30px;
+            border-radius: 12px;
+            background-color: #202024;
+            transition: transform 0.2s, border-color 0.2s, background-color 0.2s;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .interactive-card:hover {
+            transform: translateY(-4px);
+            border-color: #04d361;
+            background-color: #29292e;
+        }
+        .interactive-card h2 { margin-top: 0; margin-bottom: 15px; color: #04d361; font-size: 1.5rem; }
+        .card-description { color: #a8a8b3; font-size: 1.1rem; line-height: 1.5; margin: 0; }
+
+        .btn-back {
+            background-color: #e1e1e6;
+            color: #121214;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-bottom: 25px;
+            font-size: 1rem;
+        }
+        .btn-back:hover { background-color: #c4c4cc; }
+
+        .screen-title {
+            border-left: 5px solid #04d361;
+            padding-left: 15px;
+            margin-bottom: 25px;
+            font-size: 1.8rem;
+        }
+
+        /* Верхняя панель фильтров */
+        .filter-panel {
+            background-color: #202024;
+            border: 1px solid #29292e;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            display: flex;
+            gap: 25px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .filter-group label {
+            font-size: 0.85rem;
+            color: #a8a8b3;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .select-input {
+            background-color: #121214;
+            color: #fff;
+            border: 1px solid #29292e;
+            padding: 10px 15px;
+            border-radius: 6px;
+            font-size: 1rem;
+            min-width: 240px;
+            outline: none;
+        }
+        .select-input:focus { border-color: #04d361; }
+
+        /* ОДИН БОЛЬШОЙ КРУПНЫЙ БЛОК ГРАФИКА ДЛЯ ЧИТАЕМОСТИ */
+        .main-chart-container {
+            background-color: #202024;
+            border: 1px solid #29292e;
+            padding: 30px;
+            border-radius: 8px;
+            margin-bottom: 40px;
+            min-height: 500px; /* Большая высота, чтобы текст под осями был четко виден */
+            display: flex;
+            flex-direction: column;
+        }
+        .main-chart-container h3 {
+            margin-top: 0;
+            font-size: 1.3rem;
+            color: #ffffff;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #29292e;
+            padding-bottom: 15px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #202024;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #29292e;
+            margin-top: 15px;
+        }
+        .data-table th, .data-table td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid #29292e;
+        }
+        .data-table th {
+            background-color: #121214;
+            color: #04d361;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+        .data-table tr:hover { background-color: #29292e; }
+
+        .editable-input {
+            background-color: #121214;
+            color: #fff;
+            border: 1px solid #29292e;
+            padding: 6px 10px;
+            border-radius: 4px;
+            width: 70px;
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .btn-action {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .btn-save { background-color: #0288d1; color: white; margin-right: 8px; }
+        .btn-delete { background-color: #da3746; color: white; }
+
+        .btn-simulation {
+            background-color: #ef6c00;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+    function App() {
+        const [activeScreen, setActiveScreen] = React.useState('main');
+
+        // --- НОВАЯ СИСТЕМА ФИЛЬТРОВ ДЛЯ ОДНОГО ГРАФИКА ---
+        const [activeMetric, setActiveMetric] = React.useState('priorities'); // Какой график: 'priorities', 'composition', 'performance'
+        const [chartVisualType, setChartVisualType] = React.useState('bar');   // Какой формат отображения: 'bar', 'line', 'pie'
+        const [filterAreaType, setFilterAreaType] = React.useState('all');     // Срез по типу области в таблице
+
+        // Базовая история телеметрии
+        const [snapshotHistory, setSnapshotHistory] = React.useState([
+            { id: 1, timestamp: '04:00:15', zoneName: 'Сектор Альфа', areaType: 'logistic', basePriority: 10, dynamicPriority: 10, activeTasks: 14, totalObjects: 20, dronesPlanned: 15, dronesActive: 14, event: 'Плановый срез' },
+            { id: 2, timestamp: '04:02:15', zoneName: 'Сектор Бета', areaType: 'construction', basePriority: 5, dynamicPriority: 12, activeTasks: 25, totalObjects: 40, dronesPlanned: 30, dronesActive: 18, event: 'Смена приоритета' },
+            { id: 3, timestamp: '04:04:15', zoneName: 'Сектор Альфа', areaType: 'logistic', basePriority: 10, dynamicPriority: 10, activeTasks: 18, totalObjects: 22, dronesPlanned: 15, dronesActive: 15, event: 'Добавление сундука' },
+            { id: 4, timestamp: '04:06:15', zoneName: 'Сектор Бета', areaType: 'construction', basePriority: 5, dynamicPriority: 15, activeTasks: 35, totalObjects: 40, dronesPlanned: 30, dronesActive: 20, event: 'Рост призраков строек' },
+            { id: 5, timestamp: '04:08:15', zoneName: 'Сектор Гамма', areaType: 'logistic', basePriority: 7, dynamicPriority: 7, activeTasks: 8, totalObjects: 12, dronesPlanned: 10, dronesActive: 10, event: 'Подключение новой зоны' }
+        ]);
+
+        const mainChartRef = React.useRef(null);
+
+        // --- ЛОГИКА СБОРКИ ЕДИНОГО ГРАФИКА ---
+        const updateMainChart = () => {
+            if (mainChartRef.current) {
+                mainChartRef.current.destroy();
+            }
+
+            const ctx = document.getElementById('unifiedMainChart')?.getContext('2d');
+            if (!ctx) return;
+
+            const labels = snapshotHistory.map(item => `${item.zoneName} (${item.timestamp})`);
+
+            // Объект настроек Chart.js, который мы соберем динамически
+            let chartDataConfig = { labels: labels, datasets: [] };
+            let chartOptionsConfig = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: '#e1e1e6', font: { size: 13 } } }
+                },
+                scales: {
+                    x: { ticks: { color: '#a8a8b3', font: { size: 12 } }, grid: { color: '#29292e' } },
+                    y: { ticks: { color: '#a8a8b3', font: { size: 12 } }, grid: { color: '#29292e' }, beginAtZero: true }
+                }
+            };
+
+            // Отключаем оси координат для круговой диаграммы, так как они ей не нужны
+            if (chartVisualType === 'pie') {
+                delete chartOptionsConfig.scales;
+            }
+
+            // Шаг 1: Наполняем данными в зависимости от выбранного ТИПА ДАННЫХ (activeMetric)
+            if (activeMetric === 'priorities') {
+                chartDataConfig.datasets = [
+                    { label: 'Базовый приоритет', data: snapshotHistory.map(d => d.basePriority), backgroundColor: '#1f7144', borderColor: '#1f7144' },
+                    { label: 'Динамический приоритет', data: snapshotHistory.map(d => d.dynamicPriority), backgroundColor: '#ef6c00', borderColor: '#ef6c00' }
+                ];
+            }
+            else if (activeMetric === 'composition') {
+                if (chartVisualType === 'pie') {
+                    // Для круговой диаграммы берем суммарные агрегированные показатели
+                    const totalTasks = snapshotHistory.reduce((s, i) => s + i.activeTasks, 0);
+                    const totalObjects = snapshotHistory.reduce((s, i) => s + i.totalObjects, 0);
+                    chartDataConfig.labels = ['Активные задачи', 'Общие объекты в режиме ожидания'];
+                    chartDataConfig.datasets = [{
+                        data: [totalTasks, Math.max(0, totalObjects - totalTasks)],
+                        backgroundColor: ['#da3746', '#0288d1']
+                    }];
+                } else {
+                    chartDataConfig.datasets = [
+                        { label: 'Активные задачи фабрики', data: snapshotHistory.map(d => d.activeTasks), backgroundColor: '#da3746', borderColor: '#da3746' },
+                        { label: 'Всего обнаружено объектов', data: snapshotHistory.map(d => d.totalObjects), backgroundColor: '#0288d1', borderColor: '#0288d1' }
+                    ];
+                }
+            }
+            else if (activeMetric === 'performance') {
+                chartDataConfig.datasets = [
+                    { label: 'Запланировано роботов (План)', data: snapshotHistory.map(d => d.dronesPlanned), backgroundColor: '#ffca28', borderColor: '#ffca28', fill: false },
+                    { label: 'Реально работает в зоне (Факт)', data: snapshotHistory.map(d => d.dronesActive), backgroundColor: '#04d361', borderColor: '#04d361', fill: false }
+                ];
+            }
+
+            // Если выбран линейный график, включаем сглаживание линий для красоты
+            if (chartVisualType === 'line' && activeMetric !== 'composition') {
+                chartDataConfig.datasets.forEach(dataset => {
+                    dataset.tension = 0.3;
+                });
+            }
+
+            // Шаг 2: Инициализируем пересобранный крупный график
+            mainChartRef.current = new Chart(ctx, {
+                type: chartVisualType, // Принимает 'bar', 'line' или 'pie' со второго фильтра
+                data: chartDataConfig,
+                options: chartOptionsConfig
+            });
+        };
+
+        React.useEffect(() => {
+            if (activeScreen === 'areas') {
+                updateMainChart();
+            }
+        }, [activeScreen, activeMetric, chartVisualType, snapshotHistory]);
+
+        // Изменение приоритета диспетчером
+        const handlePriorityChange = (id, value) => {
+            setSnapshotHistory(snapshotHistory.map(item =>
+                item.id === id ? { ...item, dynamicPriority: parseInt(value) || 0 } : item
+            ));
+        };
+
+        const deleteRecord = (id) => {
+            setSnapshotHistory(snapshotHistory.filter(item => item.id !== id));
+        };
+
+        // Генерация нового snapshot-пакета (Имитация WebSocket)
+        const simulateIncomingPacket = () => {
+            const timeStr = new Date().toTimeString().split(' ')[0];
+            const newPacket = {
+                id: Date.now(),
+                timestamp: timeStr,
+                zoneName: Math.random() > 0.5 ? 'Сектор Альфа' : 'Сектор Грейд',
+                areaType: Math.random() > 0.5 ? 'logistic' : 'construction',
+                basePriority: 6,
+                dynamicPriority: Math.random() > 0.6 ? 14 : 6,
+                activeTasks: Math.floor(Math.random() * 25) + 10,
+                totalObjects: 38,
+                dronesPlanned: 20,
+                dronesActive: Math.floor(Math.random() * 10) + 10,
+                event: 'Динамический WebSocket пакет'
+            };
+            setSnapshotHistory([...snapshotHistory, newPacket]);
+        };
+
+        const filteredTableData = filterAreaType === 'all'
+            ? snapshotHistory
+            : snapshotHistory.filter(item => item.areaType === filterAreaType);
+
+        return (
+            <div className="container">
+
+                {activeScreen === 'main' && (
+                    <header style={{ marginBottom: '40px', paddingBottom: '20px', borderBottom: '1px solid #29292e' }}>
+                        <h1 style={{ fontSize: '2.2rem', margin: 0 }}>Мониторинг логистической сети Factorio</h1>
+                    </header>
+                )}
+
+                {/* ================= ГЛАВНАЯ СТРАНИЦА ================= */}
+                {activeScreen === 'main' && (
+                    <div className="dashboard-grid">
+                        <div className="interactive-card" onClick={() => setActiveScreen('areas')}>
+                            <h2>📍 Логистические области и задачи</h2>
+                            <p className="card-description">Список игровых зон, текущие задачи, учет построенных объектов и призраков.</p>
+                        </div>
+                        <div className="interactive-card" onClick={() => setActiveScreen('transport')}>
+                            <h2>📦 Журнал транспортировки и сундуков</h2>
+                            <p className="card-description">История перемещения грузов, типы сундуков и динамика изменения ресурсов.</p>
+                        </div>
+                        <div className="interactive-card" onClick={() => setActiveScreen('drones')}>
+                            <h2>🚁 Мониторинг дронов</h2>
+                            <p className="card-description">Поштучный трекинг по ID, фильтрация групп, history полетов и расчет заряда.</p>
+                        </div>
+                        <div className="interactive-card" onClick={() => setActiveScreen('combinators')}>
+                            <h2>📡 Спецификация и карта комбинаторов</h2>
+                            <p className="card-description">Структура созданных групп, привязка к областям и конфигурация игровых сигналов.</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ================= КОРРЕКТНАЯ ПЕРВАЯ КАРТОЧКА С ОДНЫМ БОЛЬШИМ ГРАФИКОМ ================= */}
+                {activeScreen === 'areas' && (
+                    <div>
+                        <button className="btn-back" onClick={() => setActiveScreen('main')}>← Назад к разделам</button>
+                        <h2 className="screen-title">📍 Раздел: Логистические области и задачи</h2>
+
+                        {/* БЛОК УПРАВЛЕНИЯ И ФИЛЬТРАЦИИ */}
+                        <div className="filter-panel">
+
+                            {/* ПЕРВЫЙ ФИЛЬТР: Выбор выводимых данных */}
+                            <div className="filter-group">
+                                <label>Выбор аналитического графика</label>
+                                <select className="select-input" value={activeMetric} onChange={(e) => setActiveMetric(e.target.value)}>
+                                    <option value="priorities">График А: Распределение приоритетов (Base vs Dynamic)</option>
+                                    <option value="composition">График Б: Нагрузка и состав текущих задач</option>
+                                    <option value="performance">График В: Эффективность выполнения (План / Факт)</option>
+                                </select>
+                            </div>
+
+                            {/* ВТОРОЙ ФИЛЬТР: Смена визуального формата под пользователя */}
+                            <div className="filter-group">
+                                <label>Удобный формат отображения</label>
+                                <select className="select-input" value={chartVisualType} onChange={(e) => setChartVisualType(e.target.value)}>
+                                    <option value="bar">Столбчатая диаграмма (Bar Chart)</option>
+                                    <option value="line">Линейный график времени (Line Chart)</option>
+                                    <option value="pie">Круговая диаграмма долей (Pie Chart)</option>
+                                </select>
+                            </div>
+
+                            <button className="btn-simulation" onClick={simulateIncomingPacket}>
+                                ⚡ Имитировать WebSocket
+                            </button>
+                        </div>
+
+                        {/* ЕДИНОЕ ПРОСТОРНОЕ ОКНО ДЛЯ МАСШТАБНОГО КРУПНОГО ГРАФИКА */}
+                        <div className="main-chart-container">
+                            <h3>
+                                📈 Аналитическая визуализация данных: {
+                                    activeMetric === 'priorities' ? 'Базовые и динамические приоритеты областей' :
+                                    activeMetric === 'composition' ? 'Общее соотношение задач и игровых объектов фабрики' :
+                                    'Сравнение запланированных и реально работающих дронов в секторах'
+                                }
+                            </h3>
+                            <div style={{ flex: 1, position: 'relative', width: '100%' }}>
+                                <canvas id="unifiedMainChart"></canvas>
+                            </div>
+                        </div>
+
+                        {/* ТАБЛИЦА С ИСТОРИЕЙ */}
+                        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                            <h3 style={{ margin: 0 }}>📋 Dynamics Log — Журнал телеметрии snapshots</h3>
+                            <select
+                                className="select-input"
+                                style={{ marginLeft: 'auto', minWidth: '180px', padding: '6px 12px' }}
+                                value={filterAreaType}
+                                onChange={(e) => setFilterAreaType(e.target.value)}
+                            >
+                                <option value="all">Все типы зон в логе</option>
+                                <option value="logistic">Только логистика</option>
+                                <option value="construction">Только стройка</option>
+                            </select>
+                        </div>
+
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Время</th>
+                                    <th>Имя области</th>
+                                    <th>Тип области</th>
+                                    <th>Базовый PR</th>
+                                    <th>Динамический PR</th>
+                                    <th>Активные задачи</th>
+                                    <th>Запланировано / Активно</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredTableData.map((row) => (
+                                    <tr key={row.id}>
+                                        <td style={{ fontFamily: 'monospace', color: '#ffca28' }}>{row.timestamp}</td>
+                                        <td style={{ fontWeight: 'bold' }}>{row.zoneName}</td>
+                                        <td>{row.areaType === 'logistic' ? '📦 Логистика' : '🏗️ Стройка'}</td>
+                                        <td>{row.basePriority}</td>
+                                        <td>
+                                            <input
+                                                type="number"
+                                                className="editable-input"
+                                                value={row.dynamicPriority}
+                                                onChange={(e) => handlePriorityChange(row.id, e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ color: '#da3746', fontWeight: 'bold' }}>{row.activeTasks} / {row.totalObjects}</td>
+                                        <td>План: {row.dronesPlanned} | Факт: {row.dronesActive}</td>
+                                        <td>
+                                            <button className="btn-action btn-save" onClick={() => alert('Данные сохранены')}>Сохранить</button>
+                                            <button className="btn-action btn-delete" onClick={() => deleteRecord(row.id)}>Удалить</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                {/* Остальные экраны как заглушки */}
+                {activeScreen === 'transport' && <div className="card"><button className="btn-back" onClick={() => setActiveScreen('main')}>← Назад</button><h2 className="screen-title">📦 Журнал транспортировки и сундуков</h2></div>}
+                {activeScreen === 'drones' && <div className="card"><button className="btn-back" onClick={() => setActiveScreen('main')}>← Назад</button><h2 className="screen-title">🚁 Мониторинг дронов</h2></div>}
+                {activeScreen === 'combinators' && <div className="card"><button className="btn-back" onClick={() => setActiveScreen('main')}>← Назад</button><h2 className="screen-title">📡 Спецификация и карта комбинаторов</h2></div>}
+
+            </div>
+        );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+</script>
+</body>
+</html>
