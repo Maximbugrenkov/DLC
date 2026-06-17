@@ -1,0 +1,2 @@
+﻿-- migration 0.1.0 -> 0.2.0
+-- TODO: Write migration script for global data

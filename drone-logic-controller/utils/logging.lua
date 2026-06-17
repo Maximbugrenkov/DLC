@@ -1,0 +1,2 @@
+﻿-- logging.lua
+-- TODO: Implement utility functions

@@ -1,0 +1,2 @@
+﻿-- components_panel.lua
+-- TODO: Implement this GUI component

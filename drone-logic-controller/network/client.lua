@@ -1,0 +1,2 @@
+﻿-- client.lua
+-- TODO: Implement Java server communication (if needed)

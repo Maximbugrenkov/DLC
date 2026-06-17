@@ -1,0 +1,2 @@
+﻿-- on_gui_closed.lua
+-- TODO: Implement event handler

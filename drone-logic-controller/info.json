@@ -1,0 +1,9 @@
+{
+  "name": "drone-logic-controller",
+  "version": "0.1.0",
+  "title": "Drone Logic Controller Prototype",
+  "author": "Your Name",
+  "description": "Минимальный прототип модуля управления дронами.",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 2.0"]
+}

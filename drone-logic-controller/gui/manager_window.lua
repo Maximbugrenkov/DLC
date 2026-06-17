@@ -1,0 +1,2 @@
+﻿-- manager_window.lua
+-- TODO: Implement this GUI window
